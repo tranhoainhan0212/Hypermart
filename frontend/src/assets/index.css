@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* custom input */
+.input {
+  @apply border border-zinc-300 rounded-lg px-3 py-2 text-sm outline-none transition-all duration-200;
+}
+.input:focus {
+  @apply border-[#ee4d2d] ring-2 ring-[#ee4d2d]/30;
+}
+.input {
+  width: 100%;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.input:focus {
+  border-color: #ee4d2d;
+  outline: none;
+}

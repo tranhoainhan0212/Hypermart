@@ -1,0 +1,48 @@
+# --- SECURITY (CỰC KỲ QUAN QUAN TRỌNG) ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Không bao giờ push file chứa secret key!
+
+# --- DEPENDENCIES ---
+node_modules/
+jspm_packages/
+package-lock.json
+yarn.lock
+
+# --- BUILD OUTPUT ---
+dist/
+dist-ssr/
+build/
+out/
+.next/
+
+# --- LOGS ---
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- IDE/EDITOR ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.eslintcache
+
+# --- OS FILES ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- TESTING ---
+coverage/
+
+uploads/
