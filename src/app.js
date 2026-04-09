@@ -35,12 +35,25 @@ function createApp() {
     crossOriginResourcePolicy: false, // Cho phép trình duyệt tải ảnh từ backend localhost
   })
 );
-  app.use(
-    cors({
-      origin: process.env.CLIENT_ORIGIN?.split(",") ?? true,
-      credentials: true,
-    })
-  );
+
+// Danh sách các link được phép gọi vào Backend
+const allowedOrigins = [
+  'http://localhost:5173', // Dành cho lúc bạn chạy trên máy
+  'https://hypermart-frontend.vercel.app', // Link Vercel chính thức (thêm nếu bạn có)
+  'https://hypermart-frontend-piwl8ulqg-tranhoainhan0212s-projects.vercel.app' // ĐÂY LÀ CÁI LINK ĐANG BỊ BÁO LỖI TRONG ẢNH
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Cho phép nếu không có origin (ví dụ test qua Postman) hoặc origin nằm trong danh sách
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // Cực kỳ quan trọng để đăng nhập được
+}));
   
   app.use('/uploads', express.static(path.join(process.cwd(), "uploads")));
 
