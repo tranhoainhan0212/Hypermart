@@ -13,3 +13,5 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server chạy tại http://localhost:${PORT}`);
 });
+
+module.exports = app;
