@@ -36,26 +36,35 @@ function createApp() {
     })
   );
 
-  // Danh sách các link được phép gọi vào Backend
+  // ==========================================
+  // CẤU HÌNH CORS THÔNG MINH (CHỐNG LỖI REGISTER FAILED)
+  // ==========================================
   const allowedOrigins = [
-    'http://localhost:5173', // Dành cho lúc bạn chạy trên máy
-    'https://hypermart-frontend.vercel.app', // Link Vercel chính thức
-    'https://hypermart-frontend-piwl8ulqg-tranhoainhan0212s-projects.vercel.app' // Link Vercel dự phòng
+    'http://localhost:5173',
+    'https://hypermart-frontend.vercel.app' // Link Frontend chính thức của bạn
   ];
 
   app.use(cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // 1. Cho phép nếu không có origin (như khi test Postman hoặc server gọi server)
+      if (!origin) return callback(null, true);
+
+      // 2. Kiểm tra nếu origin nằm trong danh sách khách VIP cố định
+      const isAllowed = allowedOrigins.includes(origin);
+
+      // 3. Kiểm tra nếu là link nháp (Preview) của Vercel sinh ra từ tài khoản của bạn
+      const isVercelPreview = origin.endsWith('.vercel.app') && origin.includes('tranhoainhan0212s');
+
+      if (isAllowed || isVercelPreview) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error('Not allowed by CORS policy'));
       }
     },
-    credentials: true, // Cực kỳ quan trọng để đăng nhập được
+    credentials: true, // Cực kỳ quan trọng để gửi Cookie/Token
   }));
-  
+
   // ==========================================
-  // FIX LỖI VERCEL Ở ĐÂY:
   // Tự động nhận diện thư mục lưu ảnh tùy theo môi trường
   // ==========================================
   const uploadPath = process.env.NODE_ENV === 'production' 
@@ -88,7 +97,7 @@ function createApp() {
   app.use(passport.initialize());
   app.use(passport.session());
   
-  // TẠMOFF: Các middleware gây lỗi read-only property
+  // TẠMOFF: Các middleware gây lỗi read-only property trên Vercel
   // app.use(mongoSanitize());
   // app.use(xss());
   
