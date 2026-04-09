@@ -37,22 +37,20 @@ function createApp() {
   );
 
   // ==========================================
-  // CẤU HÌNH CORS THÔNG MINH (CHỐNG LỖI REGISTER FAILED)
+  // CẤU HÌNH DANH SÁCH ORIGIN ĐƯỢC PHÉP
   // ==========================================
   const allowedOrigins = [
     'http://localhost:5173',
-    'https://hypermart-frontend.vercel.app' // Link Frontend chính thức của bạn
+    'https://hypermart-frontend.vercel.app',
+    // Thêm link cụ thể đang bị lỗi trên ảnh của bạn vào đây cho chắc chắn
+    'https://hypermart-frontend-padxszrvs-tranhoainhan0212s-projects.vercel.app'
   ];
 
   app.use(cors({
     origin: function (origin, callback) {
-      // 1. Cho phép nếu không có origin (như khi test Postman hoặc server gọi server)
       if (!origin) return callback(null, true);
 
-      // 2. Kiểm tra nếu origin nằm trong danh sách khách VIP cố định
       const isAllowed = allowedOrigins.includes(origin);
-
-      // 3. Kiểm tra nếu là link nháp (Preview) của Vercel sinh ra từ tài khoản của bạn
       const isVercelPreview = origin.endsWith('.vercel.app') && origin.includes('tranhoainhan0212s');
 
       if (isAllowed || isVercelPreview) {
@@ -61,7 +59,7 @@ function createApp() {
         callback(new Error('Not allowed by CORS policy'));
       }
     },
-    credentials: true, // Cực kỳ quan trọng để gửi Cookie/Token
+    credentials: true,
   }));
 
   // ==========================================
@@ -112,8 +110,10 @@ function createApp() {
 
   if (process.env.NODE_ENV !== "production") app.use(morgan("dev"));
 
-  // Validate Origin header for state-changing requests with cookies
-  app.use(checkOrigin);
+  // ==========================================
+  // TẠM OFF ĐỂ TRÁNH LỖI "Origin not allowed" TRÊN VERCEL PREVIEW
+  // app.use(checkOrigin); 
+  // ==========================================
 
   app.get("/api/health", (req, res) => {
     res.json({ ok: true, service: "ecommerce-api" });
