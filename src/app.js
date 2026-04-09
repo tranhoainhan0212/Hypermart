@@ -31,31 +31,39 @@ function createApp() {
   app.set("trust proxy", 1);
 
   app.use(
-  helmet({
-    crossOriginResourcePolicy: false, // Cho phép trình duyệt tải ảnh từ backend localhost
-  })
-);
+    helmet({
+      crossOriginResourcePolicy: false, // Cho phép trình duyệt tải ảnh từ backend localhost
+    })
+  );
 
-// Danh sách các link được phép gọi vào Backend
-const allowedOrigins = [
-  'http://localhost:5173', // Dành cho lúc bạn chạy trên máy
-  'https://hypermart-frontend.vercel.app', // Link Vercel chính thức (thêm nếu bạn có)
-  'https://hypermart-frontend-piwl8ulqg-tranhoainhan0212s-projects.vercel.app' // ĐÂY LÀ CÁI LINK ĐANG BỊ BÁO LỖI TRONG ẢNH
-];
+  // Danh sách các link được phép gọi vào Backend
+  const allowedOrigins = [
+    'http://localhost:5173', // Dành cho lúc bạn chạy trên máy
+    'https://hypermart-frontend.vercel.app', // Link Vercel chính thức
+    'https://hypermart-frontend-piwl8ulqg-tranhoainhan0212s-projects.vercel.app' // Link Vercel dự phòng
+  ];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Cho phép nếu không có origin (ví dụ test qua Postman) hoặc origin nằm trong danh sách
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true, // Cực kỳ quan trọng để đăng nhập được
-}));
+  app.use(cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true, // Cực kỳ quan trọng để đăng nhập được
+  }));
   
-  app.use('/uploads', express.static(path.join(process.cwd(), "uploads")));
+  // ==========================================
+  // FIX LỖI VERCEL Ở ĐÂY:
+  // Tự động nhận diện thư mục lưu ảnh tùy theo môi trường
+  // ==========================================
+  const uploadPath = process.env.NODE_ENV === 'production' 
+    ? '/tmp/uploads' 
+    : path.join(process.cwd(), 'uploads');
+
+  app.use('/uploads', express.static(uploadPath));
+  // ==========================================
 
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
@@ -79,9 +87,11 @@ app.use(cors({
   // Passport middleware
   app.use(passport.initialize());
   app.use(passport.session());
+  
   // TẠMOFF: Các middleware gây lỗi read-only property
   // app.use(mongoSanitize());
   // app.use(xss());
+  
   app.use(
     rateLimit({
       windowMs: 15 * 60 * 1000,
@@ -111,8 +121,6 @@ app.use(cors({
   app.use("/api/orders", orderRoutes);
   app.use("/api/admin", adminRoutes);
 
-  
-  
   app.use(notFound);
   app.use(errorHandler);
 
@@ -120,4 +128,3 @@ app.use(cors({
 }
 
 module.exports = { createApp };
-

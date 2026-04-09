@@ -3,8 +3,17 @@ const fs = require("fs");
 const multer = require("multer");
 const { HttpError } = require("../utils/httpError");
 
-const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// Cấu hình đường dẫn lưu file thông minh:
+// Nếu đang chạy trên mạng (Vercel) -> dùng thư mục tạm /tmp/uploads
+// Nếu chạy dưới máy tính (Local) -> dùng thư mục gốc uploads
+const uploadDir = process.env.NODE_ENV === "production" 
+  ? "/tmp/uploads" 
+  : path.join(process.cwd(), "uploads");
+
+// Tạo thư mục nếu nó chưa tồn tại
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
   destination(_req, _file, cb) {
@@ -25,8 +34,7 @@ function fileFilter(_req, file, cb) {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 2 * 1024 * 1024 }, // Giới hạn file 2MB
 });
 
 module.exports = { upload, uploadDir };
-
