@@ -26,7 +26,7 @@ export default function PaymentSuccessPage() {
       try {
         const { checkPaymentStatus } = await import("../services/payment");
         const status = await checkPaymentStatus(orderId || "");
-        setOrderInfo(status);
+        setOrderInfo(status as any);
       } catch (err) {
         console.error("Failed to fetch order info", err);
       } finally {

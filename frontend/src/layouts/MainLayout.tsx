@@ -360,7 +360,6 @@ function SearchBar() {
 // ── MainLayout ───────────────────────────────────────────────────────────────
 export default function MainLayout() {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const auth = useAppSelector((s) => s.auth);
   const cartItems = useAppSelector((s) => (s as any).cart?.items ?? []);
   const cartCount = cartItems.reduce((sum: number, i: any) => sum + (Number(i.quantity) || 0), 0);

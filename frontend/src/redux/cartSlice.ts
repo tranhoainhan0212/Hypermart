@@ -108,7 +108,7 @@ export const cartSlice = createSlice({
       .addCase(loadCart.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
-        writeLocalCart(action.payload);
+        writeLocalCart(action.payload); // ← ghi đè localStorage bằng data server
       })
       .addCase(loadCart.rejected, (state, action) => {
         state.loading = false;
@@ -120,6 +120,7 @@ export const cartSlice = createSlice({
       .addCase(setCartItems.rejected, (state, action) => {
         state.error = action.error.message || "Failed to set cart";
       });
+      
   },
 });
 

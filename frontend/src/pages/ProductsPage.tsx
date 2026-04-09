@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-import Icon from "../components/Icon";
+
 import { useAppDispatch, useAppSelector } from "../hooks/useApp";
 import { fetchProducts, type Product } from "../redux/productsSlice";
 import { cartActions, setCartItems } from "../redux/cartSlice";
@@ -102,7 +102,7 @@ export default function ProductsPage() {
     { value: "rating_desc", label: "Đánh giá cao" },
   ] as const;
 
-  const totalItems = list.length;
+
 
   return (
     <div style={{ background: "#f5f5f5", minHeight: "100vh", padding: "12px 0" }}>

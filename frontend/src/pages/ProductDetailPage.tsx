@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-import Icon from "../components/Icon";
+
 import { api } from "../services/api";
 import { useAppDispatch, useAppSelector } from "../hooks/useApp";
 import { fetchProductByIdOrSlug, type Product } from "../redux/productsSlice";
