@@ -24,7 +24,7 @@ const adminRoutes = require("./routes/admin.routes");
 const oauthRoutes = require("./routes/oauth.routes");
 const paymentRoutes = require("./routes/payment.routes");
 const { uploadDir } = require("./services/mediaStorage");
-const { getAllowedOrigins } = require("./config/runtime");
+const { getAllowedOrigins, isAllowedOrigin } = require("./config/runtime");
 
 function createApp() {
   const app = express();
@@ -41,7 +41,7 @@ function createApp() {
   app.use(
     cors({
       origin(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || isAllowedOrigin(origin)) {
           return callback(null, true);
         }
         return callback(new Error("Not allowed by CORS policy"));
