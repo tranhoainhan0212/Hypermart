@@ -2,6 +2,10 @@ const crypto = require("crypto");
 const { HttpError } = require("../utils/httpError");
 const { getAllowedOrigins, isAllowedOrigin } = require("../config/runtime");
 
+function isCsrfDisabled() {
+  return process.env.DISABLE_CSRF === "true";
+}
+
 function generateCsrfToken() {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -27,6 +31,8 @@ function clearCsrfCookie(res) {
 }
 
 function checkOrigin(req, _res, next) {
+  if (isCsrfDisabled()) return next();
+
   const method = String(req.method || "GET").toUpperCase();
   if (["GET", "HEAD", "OPTIONS"].includes(method)) return next();
 
@@ -55,6 +61,8 @@ function checkOrigin(req, _res, next) {
 }
 
 function requireCsrf(req, _res, next) {
+  if (isCsrfDisabled()) return next();
+
   const method = String(req.method || "GET").toUpperCase();
   if (["GET", "HEAD", "OPTIONS"].includes(method)) return next();
 
