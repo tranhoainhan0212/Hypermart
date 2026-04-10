@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
     <section className="mx-auto max-w-md rounded-2xl border bg-white p-6">
       <h2 className="text-lg font-semibold">Quên mật khẩu</h2>
       <p className="mt-2 text-sm text-zinc-600">
-        Nhập email đã đăng ký để nhận link đặt lại mật khẩu.
+        Nhập email đã đăng ký có trên mailtrap để nhận link đặt lại mật khẩu.
       </p>
 
       <div className="mt-4 space-y-3">
