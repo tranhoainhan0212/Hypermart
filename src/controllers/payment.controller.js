@@ -2,23 +2,18 @@ const Order = require("../models/Order");
 const { HttpError } = require("../utils/httpError");
 const momoService = require("../services/momo");
 const vnpayService = require("../services/vnpay");
+const { getPrimaryClientOrigin } = require("../config/runtime");
 
-/**
- * Initiate Momo payment for an order
- * POST /api/payments/momo/initiate
- */
 async function initiateMomoPayment(req, res) {
   const { orderId, returnUrl } = req.validated.body;
 
   const order = await Order.findById(orderId);
   if (!order) throw new HttpError(404, "Order not found");
 
-  // Verify order belongs to current user
   if (order.user.toString() !== req.user._id.toString()) {
     throw new HttpError(403, "Unauthorized");
   }
 
-  // Only allow payment if order is pending and unpaid
   if (order.orderStatus !== "pending") {
     throw new HttpError(400, "Order cannot be paid at this stage");
   }
@@ -31,10 +26,9 @@ async function initiateMomoPayment(req, res) {
       orderId: orderId.toString(),
       amount: Math.round(order.total),
       orderInfo: `Payment for Order #${orderId.toString().slice(-6)}`,
-      returnUrl: returnUrl || `${process.env.CLIENT_ORIGIN || "http://localhost:5173"}/orders/${orderId}?payment=success`,
+      returnUrl: returnUrl || `${getPrimaryClientOrigin()}/orders/${orderId}?payment=success`,
     });
 
-    // Save Momo transaction ID to order for webhook verification
     await Order.findByIdAndUpdate(orderId, {
       momoTransactionId: paymentData.momoTransactionId,
       momoRequestId: paymentData.requestId,
@@ -51,16 +45,9 @@ async function initiateMomoPayment(req, res) {
   }
 }
 
-/**
- * Handle Momo webhook callback
- * POST /api/payments/momo/webhook
- * This endpoint should NOT require CSRF or auth - it's called by Momo servers
- */
 async function momoWebhookHandler(req, res) {
   try {
     const webhookData = req.body;
-
-    // Verify webhook signature
     const signature = req.headers["x-momo-signature"] || req.body.signature;
     if (!signature) {
       return res.status(400).json({ resultCode: 1, message: "Missing signature" });
@@ -72,12 +59,9 @@ async function momoWebhookHandler(req, res) {
       return res.status(403).json({ resultCode: 1, message: "Invalid signature" });
     }
 
-    // Extract order ID from extraData
     let orderId;
     try {
-      const extraDataJson = JSON.parse(
-        Buffer.from(webhookData.extraData, "base64").toString()
-      );
+      const extraDataJson = JSON.parse(Buffer.from(webhookData.extraData, "base64").toString());
       orderId = extraDataJson.orderId;
     } catch (e) {
       console.error("Failed to parse Momo extraData:", e);
@@ -89,13 +73,7 @@ async function momoWebhookHandler(req, res) {
       return res.status(404).json({ resultCode: 1, message: "Order not found" });
     }
 
-    // Check payment result code
-    // Momo result codes:
-    // 0 = Success
-    // 1 = Payer cancelled (user closed window before completing)
-    // Other numbers = Various errors
     if (webhookData.resultCode === 0) {
-      // Payment successful
       await Order.findByIdAndUpdate(orderId, {
         paymentStatus: "paid",
         orderStatus: "confirmed",
@@ -104,10 +82,8 @@ async function momoWebhookHandler(req, res) {
 
       res.json({ resultCode: 0, message: "Payment confirmed" });
     } else if (webhookData.resultCode === 1) {
-      // Payer cancelled
       res.json({ resultCode: 0, message: "Payment cancelled" });
     } else {
-      // Other errors
       console.error(`Momo payment error for order ${orderId}:`, webhookData);
       res.json({ resultCode: 0, message: "Payment processing failed" });
     }
@@ -117,22 +93,16 @@ async function momoWebhookHandler(req, res) {
   }
 }
 
-/**
- * Initiate VNPay payment for an order
- * POST /api/payments/vnpay/initiate
- */
 async function initiateVnPayPayment(req, res) {
   const { orderId, returnUrl } = req.validated.body;
 
   const order = await Order.findById(orderId);
   if (!order) throw new HttpError(404, "Order not found");
 
-  // Verify order belongs to current user
   if (order.user.toString() !== req.user._id.toString()) {
     throw new HttpError(403, "Unauthorized");
   }
 
-  // Only allow payment if order is pending and unpaid
   if (order.orderStatus !== "pending") {
     throw new HttpError(400, "Order cannot be paid at this stage");
   }
@@ -146,10 +116,9 @@ async function initiateVnPayPayment(req, res) {
       orderId: orderId.toString(),
       amount: Math.round(order.total),
       orderInfo: `Payment for Order #${orderId.toString().slice(-6)}`,
-      returnUrl: returnUrl || `${(process.env.CLIENT_ORIGIN || "http://localhost:5173").split(",")[0].trim()}/orders/${orderId}?payment=success`,
+      returnUrl: returnUrl || `${getPrimaryClientOrigin()}/orders/${orderId}?payment=success`,
     });
 
-    // Save vnp txn ref on order for reference (optional)
     await Order.findByIdAndUpdate(orderId, {
       vnpTxnRef: paymentData.vnp_TxnRef,
     });
@@ -164,16 +133,12 @@ async function initiateVnPayPayment(req, res) {
   }
 }
 
-/**
- * VNPay return handler (user redirected back)
- * GET /api/payments/vnpay/return
- */
 async function vnpayReturnHandler(req, res) {
   try {
     const valid = vnpayService.verifyReturn(req.query);
     const txnRef = req.query.vnp_TxnRef;
 
-    const clientOrigin = (process.env.CLIENT_ORIGIN || "http://localhost:5173").split(",")[0];
+    const clientOrigin = getPrimaryClientOrigin();
     const redirectBase = `${clientOrigin}/orders/${txnRef}/payment`;
 
     if (!valid) {
@@ -188,7 +153,6 @@ async function vnpayReturnHandler(req, res) {
 
     const respCode = req.query.vnp_ResponseCode;
     if (respCode === "00") {
-      // success
       await Order.findByIdAndUpdate(txnRef, {
         paymentStatus: "paid",
         orderStatus: "confirmed",
@@ -197,7 +161,6 @@ async function vnpayReturnHandler(req, res) {
       return res.redirect(`${redirectBase}?result=success`);
     }
 
-    // not success
     return res.redirect(`${redirectBase}?result=failed&code=${respCode || "unknown"}`);
   } catch (error) {
     console.error("VNPay return processing error:", error);
@@ -205,15 +168,9 @@ async function vnpayReturnHandler(req, res) {
   }
 }
 
-/**
- * VNPay IPN / webhook handler (server-to-server)
- * POST or GET /api/payments/vnpay/ipn
- * This endpoint should NOT require CSRF or auth - called by VNPay servers
- */
 async function vnpayIpnHandler(req, res) {
   try {
     const data = req.method === "GET" ? req.query : req.body;
-
     const isValid = vnpayService.verifyReturn(data);
     const txnRef = data.vnp_TxnRef;
 
@@ -230,7 +187,6 @@ async function vnpayIpnHandler(req, res) {
 
     const respCode = data.vnp_ResponseCode;
 
-    // Persist VNPay fields for tracing
     await Order.findByIdAndUpdate(txnRef, {
       vnpTxnRef: data.vnp_TxnRef,
       vnpTransactionNo: data.vnp_TransactionNo || "",
@@ -238,14 +194,12 @@ async function vnpayIpnHandler(req, res) {
     });
 
     if (respCode === "00") {
-      // mark paid if not already
       if (order.paymentStatus !== "paid") {
         await Order.findByIdAndUpdate(txnRef, { paymentStatus: "paid", orderStatus: "confirmed" });
       }
       return res.json({ RspCode: "00", Message: "Confirm Success" });
     }
 
-    // Payment not successful
     return res.json({ RspCode: "02", Message: "Payment failed" });
   } catch (error) {
     console.error("VNPay IPN processing error:", error);
@@ -253,17 +207,12 @@ async function vnpayIpnHandler(req, res) {
   }
 }
 
-/**
- * Check payment status
- * GET /api/payments/:orderId/status
- */
 async function checkPaymentStatus(req, res) {
   const { orderId } = req.validated.params;
 
   const order = await Order.findById(orderId);
   if (!order) throw new HttpError(404, "Order not found");
 
-  // Verify order belongs to current user
   if (order.user.toString() !== req.user._id.toString()) {
     throw new HttpError(403, "Unauthorized");
   }

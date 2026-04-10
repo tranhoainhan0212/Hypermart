@@ -8,9 +8,8 @@ const session = require("express-session");
 const passport = require("passport");
 // const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
-const path = require('path');
 
-require("./config/passport"); // Initialize passport strategies
+require("./config/passport");
 
 const { notFound, errorHandler } = require("./middlewares/error");
 const { checkOrigin } = require("./middlewares/csrf");
@@ -24,59 +23,39 @@ const orderRoutes = require("./routes/order.routes");
 const adminRoutes = require("./routes/admin.routes");
 const oauthRoutes = require("./routes/oauth.routes");
 const paymentRoutes = require("./routes/payment.routes");
+const { uploadDir } = require("./services/mediaStorage");
+const { getAllowedOrigins } = require("./config/runtime");
 
 function createApp() {
   const app = express();
+  const allowedOrigins = getAllowedOrigins();
 
   app.set("trust proxy", 1);
 
   app.use(
     helmet({
-      crossOriginResourcePolicy: false, // Cho phép trình duyệt tải ảnh từ backend localhost
+      crossOriginResourcePolicy: false,
     })
   );
 
-  // ==========================================
-  // CẤU HÌNH DANH SÁCH ORIGIN ĐƯỢC PHÉP
-  // ==========================================
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'https://hypermart-frontend.vercel.app',
-    // Thêm link cụ thể đang bị lỗi trên ảnh của bạn vào đây cho chắc chắn
-    'https://hypermart-frontend-padxszrvs-tranhoainhan0212s-projects.vercel.app'
-  ];
+  app.use(
+    cors({
+      origin(origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error("Not allowed by CORS policy"));
+      },
+      credentials: true,
+    })
+  );
 
-  app.use(cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-
-      const isAllowed = allowedOrigins.includes(origin);
-      const isVercelPreview = origin.endsWith('.vercel.app') && origin.includes('tranhoainhan0212s');
-
-      if (isAllowed || isVercelPreview) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS policy'));
-      }
-    },
-    credentials: true,
-  }));
-
-  // ==========================================
-  // Tự động nhận diện thư mục lưu ảnh tùy theo môi trường
-  // ==========================================
-  const uploadPath = process.env.NODE_ENV === 'production' 
-    ? '/tmp/uploads' 
-    : path.join(process.cwd(), 'uploads');
-
-  app.use('/uploads', express.static(uploadPath));
-  // ==========================================
+  app.use("/uploads", express.static(uploadDir));
 
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
-  // Session configuration for OAuth
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "your-secret-key",
@@ -86,19 +65,17 @@ function createApp() {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        maxAge: 24 * 60 * 60 * 1000,
       },
     })
   );
 
-  // Passport middleware
   app.use(passport.initialize());
   app.use(passport.session());
-  
-  // TẠMOFF: Các middleware gây lỗi read-only property trên Vercel
+
   // app.use(mongoSanitize());
   // app.use(xss());
-  
+
   app.use(
     rateLimit({
       windowMs: 15 * 60 * 1000,
@@ -110,13 +87,10 @@ function createApp() {
 
   if (process.env.NODE_ENV !== "production") app.use(morgan("dev"));
 
-  // ==========================================
-  // TẠM OFF ĐỂ TRÁNH LỖI "Origin not allowed" TRÊN VERCEL PREVIEW
-  // app.use(checkOrigin); 
-  // ==========================================
+  app.use(checkOrigin);
 
-  app.get("/api/health", (req, res) => {
-    res.json({ ok: true, service: "ecommerce-api" });
+  app.get("/api/health", (_req, res) => {
+    res.json({ ok: true, service: "ecommerce-api", allowedOrigins });
   });
 
   app.use("/api/auth", authRoutes);

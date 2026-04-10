@@ -2,16 +2,13 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { hashToken } = require("../middlewares/auth");
 const { setCsrfCookie } = require("../middlewares/csrf");
+const { getPrimaryClientOrigin } = require("../config/runtime");
 
-// ✅ Lấy frontend URL chuẩn
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const FRONTEND_URL = getPrimaryClientOrigin();
 
-// ================= GOOGLE =================
-
-// Google callback handler (passport)
 function googleCallback(accessToken, refreshToken, profile, done) {
   User.findOne({ email: profile.emails?.[0]?.value })
-    .then(user => {
+    .then((user) => {
       const email = profile.emails?.[0]?.value;
       const name = profile.displayName;
       const googleId = profile.id;
@@ -36,14 +33,12 @@ function googleCallback(accessToken, refreshToken, profile, done) {
 
       return newUser.save().then(() => done(null, newUser));
     })
-    .catch(err => done(err));
+    .catch((err) => done(err));
 }
-
-// ================= FACEBOOK =================
 
 function facebookCallback(accessToken, refreshToken, profile, done) {
   User.findOne({ email: profile.emails?.[0]?.value })
-    .then(user => {
+    .then((user) => {
       const email = profile.emails?.[0]?.value;
       const name = profile.displayName;
       const facebookId = profile.id;
@@ -68,10 +63,8 @@ function facebookCallback(accessToken, refreshToken, profile, done) {
 
       return newUser.save().then(() => done(null, newUser));
     })
-    .catch(err => done(err));
+    .catch((err) => done(err));
 }
-
-// ================= TOKEN =================
 
 async function generateTokens(user) {
   const accessToken = jwt.sign(
@@ -89,13 +82,9 @@ async function generateTokens(user) {
   return { accessToken, refreshToken };
 }
 
-// ================= GOOGLE REDIRECT =================
-
-function googleRedirect(req, res) {
+function googleRedirect(_req, res) {
   res.redirect("/api/auth/google/callback");
 }
-
-// ================= GOOGLE CALLBACK =================
 
 async function googleCallbackRedirect(req, res) {
   try {
@@ -118,20 +107,13 @@ async function googleCallbackRedirect(req, res) {
     });
 
     const csrfToken = setCsrfCookie(res);
-
-    // ✅ FIX CHUẨN: dùng FRONTEND_URL duy nhất
     const redirectUrl = `${FRONTEND_URL}/auth-callback?token=${accessToken}&csrf=${csrfToken}`;
-
-    console.log("Redirecting to:", redirectUrl); // debug
-
     res.redirect(redirectUrl);
   } catch (err) {
     console.error("Google callback error:", err);
     res.redirect(`${FRONTEND_URL}/login?error=callback_error`);
   }
 }
-
-// ================= FACEBOOK CALLBACK =================
 
 async function facebookCallbackRedirect(req, res) {
   try {
@@ -154,11 +136,7 @@ async function facebookCallbackRedirect(req, res) {
     });
 
     const csrfToken = setCsrfCookie(res);
-
     const redirectUrl = `${FRONTEND_URL}/auth-callback?token=${accessToken}&csrf=${csrfToken}`;
-
-    console.log("Redirecting to:", redirectUrl);
-
     res.redirect(redirectUrl);
   } catch (err) {
     console.error("Facebook callback error:", err);

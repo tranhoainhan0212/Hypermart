@@ -1,10 +1,10 @@
 const express = require("express");
 const passport = require("passport");
 const ctrl = require("../controllers/oauth.controller");
+const { getPrimaryClientOrigin } = require("../config/runtime");
 
 const router = express.Router();
 
-// Google OAuth
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 router.get(
@@ -13,7 +13,6 @@ router.get(
   ctrl.googleCallbackRedirect
 );
 
-// Facebook OAuth
 router.get("/facebook", passport.authenticate("facebook", { scope: ["email"] }));
 
 router.get(
@@ -22,15 +21,12 @@ router.get(
   ctrl.facebookCallbackRedirect
 );
 
-// Failure routes
-router.get("/google/failure", (req, res) => {
-  const redirectUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=google_auth_cancelled`;
-  res.redirect(redirectUrl);
+router.get("/google/failure", (_req, res) => {
+  res.redirect(`${getPrimaryClientOrigin()}/login?error=google_auth_cancelled`);
 });
 
-router.get("/facebook/failure", (req, res) => {
-  const redirectUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=facebook_auth_cancelled`;
-  res.redirect(redirectUrl);
+router.get("/facebook/failure", (_req, res) => {
+  res.redirect(`${getPrimaryClientOrigin()}/login?error=facebook_auth_cancelled`);
 });
 
 module.exports = router;

@@ -12,6 +12,7 @@ const { hashToken, compareToken } = require("../middlewares/auth");
 const { sendMail } = require("../utils/email");
 const { resetPasswordEmailTemplate } = require("../utils/emails/resetPasswordEmail");
 const { setCsrfCookie, clearCsrfCookie } = require("../middlewares/csrf");
+const { getPrimaryClientOrigin } = require("../config/runtime");
 
 function setRefreshCookie(res, token) {
   res.cookie("refreshToken", token, {
@@ -24,7 +25,11 @@ function setRefreshCookie(res, token) {
 }
 
 function clearRefreshCookie(res) {
-  res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
+  res.clearCookie("refreshToken", {
+    path: "/api/auth/refresh",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 }
 
 async function register(req, res) {
@@ -38,7 +43,7 @@ async function register(req, res) {
     email,
     passwordHash,
     name: name || "",
-    isEmailVerified: true, // simplified: mark verified
+    isEmailVerified: true,
   });
 
   const accessToken = signAccessToken({ sub: user._id.toString(), role: user.role });
@@ -94,10 +99,8 @@ async function refresh(req, res) {
   if (!ok) throw new HttpError(401, "Invalid refresh token");
 
   const accessToken = signAccessToken({ sub: user._id.toString(), role: user.role });
-  
-  // Rotate CSRF token on refresh
   const newCsrfToken = setCsrfCookie(res);
-  
+
   res.json({ accessToken, csrfToken: newCsrfToken });
 }
 
@@ -133,7 +136,6 @@ async function updateMe(req, res) {
 async function forgotPassword(req, res) {
   const { email } = req.validated.body;
   const user = await User.findOne({ email }).select("+resetPasswordTokenHash +resetPasswordExpiresAt");
-  // Always return ok to prevent enumeration
   if (!user) return res.json({ ok: true });
 
   const rawToken = crypto.randomBytes(32).toString("hex");
@@ -143,13 +145,13 @@ async function forgotPassword(req, res) {
   user.resetPasswordExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
   await user.save();
 
-  const resetUrl = `${process.env.CLIENT_ORIGIN || "http://localhost:5173"}/reset-password?token=${rawToken}&email=${encodeURIComponent(
+  const resetUrl = `${getPrimaryClientOrigin()}/reset-password?token=${rawToken}&email=${encodeURIComponent(
     email
   )}`;
 
   await sendMail({
     to: email,
-    subject: "Đặt lại mật khẩu",
+    subject: "�?t l?i m?t kh?u",
     html: resetPasswordEmailTemplate({
       resetUrl,
       brandName: "E-Commerce",
@@ -196,4 +198,3 @@ module.exports = {
   forgotPassword,
   resetPassword,
 };
-

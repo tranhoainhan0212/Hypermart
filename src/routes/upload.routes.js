@@ -2,6 +2,7 @@ const express = require("express");
 const { requireAuth, requireRole } = require("../middlewares/auth");
 const { requireCsrf } = require("../middlewares/csrf");
 const { upload } = require("../middlewares/upload");
+const { storeImage } = require("../services/mediaStorage");
 
 const router = express.Router();
 
@@ -11,13 +12,10 @@ router.post(
   requireAuth,
   requireRole("admin"),
   upload.single("image"),
-  (req, res) => {
-    const file = req.file;
-    if (!file) return res.status(400).json({ message: "Missing image file" });
-    const url = `/uploads/${file.filename}`;
-    res.status(201).json({ url });
+  async (req, res) => {
+    const uploaded = await storeImage(req.file);
+    res.status(201).json({ url: uploaded.url });
   }
 );
 
 module.exports = router;
-

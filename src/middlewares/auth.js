@@ -6,13 +6,10 @@ const { verifyAccessToken } = require("../utils/jwt");
 async function requireAuth(req, _res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-  // DEBUG: log incoming auth header (trimmed)
-  try { console.debug("requireAuth: authorization header first40:", header ? header.slice(0, 60) : null); } catch (e) {}
   if (!token) return next(new HttpError(401, "Missing access token"));
 
   try {
     const payload = verifyAccessToken(token);
-    try { console.debug("requireAuth: token payload sub:", payload && payload.sub); } catch (e) {}
     const user = await User.findById(payload.sub).select("email name role isBanned");
     if (!user) return next(new HttpError(401, "User not found"));
     if (user.isBanned) return next(new HttpError(403, "Account has been banned"));
@@ -26,8 +23,9 @@ async function requireAuth(req, _res, next) {
 function requireRole(...roles) {
   return (req, _res, next) => {
     if (!req.user) return next(new HttpError(401, "Unauthorized"));
-    if (!roles.includes(req.user.role))
+    if (!roles.includes(req.user.role)) {
       return next(new HttpError(403, "Forbidden"));
+    }
     next();
   };
 }
@@ -43,4 +41,3 @@ async function compareToken(token, tokenHash) {
 }
 
 module.exports = { requireAuth, requireRole, hashToken, compareToken };
-

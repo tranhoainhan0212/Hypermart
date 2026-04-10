@@ -1,17 +1,22 @@
-const express = require("express");
-const app = express();
+require("dotenv").config();
 
-// PORT
-const PORT = 3000;
+const { createApp } = require("./src/app");
+const { connectDb } = require("./src/config/db");
 
-// Route test
-app.get("/", (req, res) => {
-  res.send("Hello World - Server đang chạy 🚀");
-});
+const app = createApp();
+let ready;
 
-// Run server
-app.listen(PORT, () => {
-  console.log(`Server chạy tại http://localhost:${PORT}`);
-});
+async function ensureReady() {
+  if (!ready) {
+    ready = connectDb(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/ecommerce").catch((error) => {
+      ready = null;
+      throw error;
+    });
+  }
+  await ready;
+}
 
-module.exports = app;
+module.exports = async (req, res) => {
+  await ensureReady();
+  return app(req, res);
+};

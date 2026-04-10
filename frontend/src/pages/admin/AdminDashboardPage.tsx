@@ -13,6 +13,11 @@ type TabKey         = "overview" | "categories" | "products" | "orders" | "revie
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
+function resolveImageUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url}`;
+}
 const TABS: { key: TabKey; label: string; color: string }[] = [
   { key: "overview",   label: "Tổng quan",  color: "#EE4D2D" },
   { key: "products",   label: "Sản phẩm",   color: "#2563eb" },
@@ -472,7 +477,7 @@ export default function AdminDashboardPage() {
                         </button>
                         {pImgUrl && (
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <img src={`${API_BASE}${pImgUrl}`} alt="preview" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid #e0e0e0" }} />
+                            <img src={`${resolveImageUrl(pImgUrl)}`} alt="preview" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid #e0e0e0" }} />
                             <span style={{ fontSize: 12, color: "#059669", fontWeight: 500 }}>✓ Ảnh sẵn sàng</span>
                           </div>
                         )}
@@ -507,7 +512,7 @@ export default function AdminDashboardPage() {
                           <tr key={p._id}>
                             <td>
                               <div style={{ width: 42, height: 42, borderRadius: 6, overflow: "hidden", border: "1px solid #f0f0f0", background: "#f9f9f9" }}>
-                                {p.images?.[0]?.url && <img src={`${API_BASE}${p.images[0].url}`} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                                {p.images?.[0]?.url && <img src={`${resolveImageUrl(p.images[0].url)}`} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                               </div>
                             </td>
                             <td style={{ fontWeight: 500 }}>
